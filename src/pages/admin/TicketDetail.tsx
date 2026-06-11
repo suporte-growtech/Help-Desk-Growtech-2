@@ -7,9 +7,11 @@ import { ZoomImage } from '../../components/ui/ZoomImage'
 import { Loading } from '../../components/ui/Loading'
 import { ArrowLeft, Send, Paperclip, Download, Clock, User, RotateCcw } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { ChatPanel } from '../../components/ChatPanel'
 
 interface TicketDetail {
   id: string
+  user_id: string
   title: string
   description: string
   status: string
@@ -256,6 +258,8 @@ export function AdminTicketDetail() {
           </div>
         </form>
       </div>
+
+      <ChatPanel ticketId={id!} ticketUserId={ticket.user_id} />
     </div>
   )
 }

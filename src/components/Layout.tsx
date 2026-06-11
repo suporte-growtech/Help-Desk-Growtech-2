@@ -3,7 +3,7 @@ import { ThemeToggle } from './ui/ThemeToggle'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import {
-  LayoutDashboard, Ticket, Monitor, LogOut, Menu, X, HardDrive, Clock, Users, UserCog, Mail, Server, MessageSquare
+  LayoutDashboard, Ticket, Monitor, LogOut, Menu, X, HardDrive, Clock, Users, UserCog, Mail, Server
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -20,7 +20,6 @@ export function AdminLayout() {
     { to: '/admin/users', icon: UserCog, label: 'Usuários' },
     { to: '/admin/emails', icon: Mail, label: 'Emails' },
     { to: '/admin/servers', icon: Server, label: 'Servidores' },
-    { to: '/admin/chat', icon: MessageSquare, label: 'Chat' },
   ]
 
   const handleSignOut = async () => {
@@ -124,7 +123,6 @@ export function UserLayout() {
     { to: '/user', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/user/new-ticket', icon: Ticket, label: 'Novo Chamado' },
     { to: '/user/my-tickets', icon: Clock, label: 'Meus Chamados' },
-    { to: '/user/chat', icon: MessageSquare, label: 'Chat' },
   ]
 
   return (

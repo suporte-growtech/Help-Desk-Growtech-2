@@ -7,6 +7,7 @@ import { ZoomImage } from '../../components/ui/ZoomImage'
 import { Loading } from '../../components/ui/Loading'
 import { Search, Clock, MessageCircle, RotateCcw } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { ChatPanel } from '../../components/ChatPanel'
 
 interface Ticket {
   id: string
@@ -156,6 +157,8 @@ export function MyTickets() {
                       </div>
                     </div>
                   )}
+
+                  <ChatPanel ticketId={ticket.id} ticketUserId={profile?.id || ''} />
                 </div>
               )}
             </div>
