@@ -26,22 +26,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
-      setLoading(false)
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
-      else setProfile(null)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
   async function fetchProfile(userId: string) {
     const { data } = await supabase
       .from('profiles')
@@ -51,8 +35,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(data as Profile | null)
   }
 
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        await fetchProfile(session.user.id)
+      }
+      setLoading(false)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      if (!session?.user) {
+        setProfile(null)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
   async function signIn(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (!error) {
+      const { data: { user: u } } = await supabase.auth.getUser()
+      if (u) {
+        await fetchProfile(u.id)
+      }
+    }
     return { error: error?.message || null }
   }
 
