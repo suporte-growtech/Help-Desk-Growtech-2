@@ -31,7 +31,9 @@ export function ChatPanel({ ticketId, ticketUserId }: ChatPanelProps) {
   useEffect(() => {
     loadMessages()
     subscribe()
+    const poll = setInterval(loadMessages, 3000)
     return () => {
+      clearInterval(poll)
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
       }
