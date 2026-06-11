@@ -9,6 +9,7 @@ import { AdminTickets } from './pages/admin/Tickets'
 import { AdminTicketDetail } from './pages/admin/TicketDetail'
 import { AdminNotebooks } from './pages/admin/Notebooks'
 import { AdminUsers } from './pages/admin/Users'
+import { AdminEmails } from './pages/admin/Emails'
 import { UserLayout } from './components/Layout'
 import { UserDashboard } from './pages/user/Dashboard'
 import { NewTicket } from './pages/user/NewTicket'
@@ -60,6 +61,7 @@ function AppRoutes() {
         <Route path="tickets/:id" element={<AdminTicketDetail />} />
         <Route path="notebooks" element={<AdminNotebooks />} />
         <Route path="users" element={<AdminUsers />} />
+        <Route path="emails" element={<AdminEmails />} />
       </Route>
       <Route path="/user" element={
         <AuthGuard role="user">
