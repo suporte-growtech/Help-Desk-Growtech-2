@@ -5,7 +5,8 @@ import { StatusBadge } from '../../components/ui/StatusBadge'
 import { PriorityBadge } from '../../components/ui/PriorityBadge'
 import { ZoomImage } from '../../components/ui/ZoomImage'
 import { Loading } from '../../components/ui/Loading'
-import { Search, Clock, MessageCircle } from 'lucide-react'
+import { Search, Clock, MessageCircle, RotateCcw } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 interface Ticket {
   id: string
@@ -105,6 +106,20 @@ export function MyTickets() {
 
               {isExpanded && (
                 <div className="px-5 pb-5 border-t border-gray-200 dark:border-gray-800 pt-4 space-y-4">
+                  {(ticket.status === 'resolved' || ticket.status === 'closed') && (
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation()
+                        const { error } = await supabase.from('tickets').update({ status: 'open' }).eq('id', ticket.id)
+                        if (error) toast.error('Erro ao reabrir chamado')
+                        else { toast.success('Chamado reaberto!'); loadTickets() }
+                      }}
+                      className="flex items-center gap-1 px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-all"
+                    >
+                      <RotateCcw size={14} /> Reabrir Chamado
+                    </button>
+                  )}
+
                   <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{ticket.description}</p>
 
                   {ticket.ticket_attachments && ticket.ticket_attachments.length > 0 && (

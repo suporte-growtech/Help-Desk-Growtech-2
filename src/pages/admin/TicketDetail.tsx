@@ -5,7 +5,7 @@ import { StatusBadge } from '../../components/ui/StatusBadge'
 import { PriorityBadge } from '../../components/ui/PriorityBadge'
 import { ZoomImage } from '../../components/ui/ZoomImage'
 import { Loading } from '../../components/ui/Loading'
-import { ArrowLeft, Send, Paperclip, Download, Clock, User } from 'lucide-react'
+import { ArrowLeft, Send, Paperclip, Download, Clock, User, RotateCcw } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface TicketDetail {
@@ -108,6 +108,19 @@ export function AdminTicketDetail() {
     }
   }
 
+  async function handleUpdatePriority(priority: string) {
+    const { error } = await supabase
+      .from('tickets')
+      .update({ priority })
+      .eq('id', id)
+
+    if (error) toast.error('Erro ao atualizar prioridade')
+    else {
+      toast.success('Prioridade atualizada!')
+      loadTicket()
+    }
+  }
+
   if (loading) return <Loading />
   if (!ticket) return <div className="text-center py-12 text-gray-500">Chamado não encontrado</div>
 
@@ -122,7 +135,7 @@ export function AdminTicketDetail() {
         <div className="p-6 border-b border-gray-200 dark:border-gray-800">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">{ticket.title}</h2>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {ticket.status === 'open' && (
                 <button onClick={() => handleUpdateStatus('in_progress')} className="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm hover:bg-yellow-600 transition-all">
                   Iniciar
@@ -133,6 +146,11 @@ export function AdminTicketDetail() {
                   Resolver
                 </button>
               )}
+              {(ticket.status === 'resolved' || ticket.status === 'closed') && (
+                <button onClick={() => handleUpdateStatus('open')} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-all flex items-center gap-1">
+                  <RotateCcw size={14} /> Reabrir
+                </button>
+              )}
               {ticket.status !== 'closed' && ticket.status !== 'resolved' && (
                 <button onClick={() => handleUpdateStatus('closed')} className="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600 transition-all">
                   Fechar
@@ -141,9 +159,18 @@ export function AdminTicketDetail() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <StatusBadge status={ticket.status} />
-            <PriorityBadge priority={ticket.priority} />
+            <select
+              value={ticket.priority}
+              onChange={e => handleUpdatePriority(e.target.value)}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary outline-none cursor-pointer"
+            >
+              <option value="low">Baixa</option>
+              <option value="medium">Média</option>
+              <option value="high">Alta</option>
+              <option value="critical">Crítica</option>
+            </select>
             {ticket.notebooks && (
               <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
                 {ticket.notebooks.brand} - {ticket.notebooks.patrimonio_number}
