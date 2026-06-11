@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
@@ -13,32 +13,30 @@ import { UserLayout } from './components/Layout'
 import { UserDashboard } from './pages/user/Dashboard'
 import { NewTicket } from './pages/user/NewTicket'
 import { MyTickets } from './pages/user/MyTickets'
+import { useEffect, useState } from 'react'
 
 function ProtectedRoute({ children, role }: { children: React.ReactNode; role?: string }) {
-  const { user, profile, loading } = useAuth()
+  const { user, profile, loading, refresh } = useAuth()
+  const [checking, setChecking] = useState(true)
 
-  if (loading) return <Loading />
-  if (!user) return <Navigate to="/" />
+  useEffect(() => {
+    refresh().then(() => setChecking(false))
+  }, [])
+
+  if (loading || checking) return <Loading />
+  if (!user) return <Navigate to="/" replace />
+  if (role && !profile) return <Loading />
   if (role && profile?.role !== role) {
-    return <Navigate to={profile?.role === 'admin' ? '/admin' : '/user'} />
+    return <Navigate to={profile?.role === 'admin' ? '/admin' : '/user'} replace />
   }
 
   return <>{children}</>
 }
 
-function PublicRoute() {
-  const { user, profile, loading } = useAuth()
-  if (loading) return <Loading />
-  if (user && profile) {
-    return <Navigate to={profile.role === 'admin' ? '/admin' : '/user'} />
-  }
-  return <Login />
-}
-
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<PublicRoute />} />
+      <Route path="/" element={<Login />} />
       
       <Route path="/admin" element={
         <ProtectedRoute role="admin">

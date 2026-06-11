@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { useAuth } from '../contexts/AuthContext'
-import { useTheme } from '../contexts/ThemeContext'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 import { ThemeToggle } from '../components/ui/ThemeToggle'
 import { HardDrive, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
 
@@ -11,7 +11,28 @@ export function Login() {
   const [submitting, setSubmitting] = useState(false)
   const [isRegister, setIsRegister] = useState(false)
   const [name, setName] = useState('')
-  const { signIn, signUp } = useAuth()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    checkSession()
+  }, [])
+
+  async function checkSession() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.user) {
+      await redirectByRole(session.user.id)
+    }
+  }
+
+  async function redirectByRole(userId: string) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single()
+    if (data?.role === 'admin') navigate('/admin', { replace: true })
+    else if (data?.role === 'user') navigate('/user', { replace: true })
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -19,13 +40,24 @@ export function Login() {
 
     try {
       if (isRegister) {
-        const { error } = await signUp(email, password, name)
-        if (error) throw new Error(error)
+        const { error } = await supabase.auth.signUp({ email, password })
+        if (error) throw error
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          await supabase.from('profiles').insert([
+            { id: user.id, name, role: 'user', department: '', city: '' }
+          ])
+        }
         alert('Conta criada! Verifique seu email.')
         setIsRegister(false)
       } else {
-        const { error } = await signIn(email, password)
-        if (error) throw new Error(error)
+        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        if (error) throw error
+
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          await redirectByRole(user.id)
+        }
       }
     } catch (err: any) {
       alert(err.message || 'Erro ao autenticar')
@@ -39,7 +71,6 @@ export function Login() {
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
-
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
@@ -49,12 +80,10 @@ export function Login() {
             </div>
             <p className="text-gray-500 dark:text-gray-400">Help Desk - Suporte Técnico</p>
           </div>
-
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg dark:shadow-gray-900/50 p-8 border border-gray-200 dark:border-gray-800">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
               {isRegister ? 'Criar Conta' : 'Entrar'}
             </h2>
-
             <form onSubmit={handleSubmit} className="space-y-4">
               {isRegister && (
                 <div>
@@ -64,7 +93,6 @@ export function Login() {
                     placeholder="Seu nome" required />
                 </div>
               )}
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
                 <div className="relative">
@@ -74,7 +102,6 @@ export function Login() {
                     placeholder="seu@email.com" required />
                 </div>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Senha</label>
                 <div className="relative">
@@ -88,14 +115,12 @@ export function Login() {
                   </button>
                 </div>
               </div>
-
               <button type="submit" disabled={submitting}
                 className="w-full py-2.5 bg-primary hover:bg-primary-dark text-white font-medium rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                 {submitting && <Loader2 size={18} className="animate-spin" />}
                 {isRegister ? 'Criar Conta' : 'Entrar'}
               </button>
             </form>
-
             <div className="mt-4 text-center">
               <button onClick={() => setIsRegister(!isRegister)}
                 className="text-sm text-primary hover:text-primary-dark transition-all">
