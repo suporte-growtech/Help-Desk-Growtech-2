@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { Send, MessageSquare, Check, CheckCheck } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 interface ChatMessage {
   id: string
@@ -25,10 +26,16 @@ export function ChatPanel({ ticketId, ticketUserId }: ChatPanelProps) {
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   useEffect(() => {
     loadMessages()
     subscribe()
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+      }
+    }
   }, [ticketId])
 
   useEffect(() => {
@@ -36,31 +43,38 @@ export function ChatPanel({ ticketId, ticketUserId }: ChatPanelProps) {
   }, [messages])
 
   function subscribe() {
-    const sub = supabase
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current)
+    }
+    const channel = supabase
       .channel(`chat-${ticketId}`)
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `ticket_id=eq.${ticketId}` },
         (payload: any) => {
-          setMessages(prev => [...prev, payload.new as ChatMessage])
+          const existing = messages.find(m => m.id === payload.new.id)
+          if (!existing) {
+            setMessages(prev => [...prev, payload.new as ChatMessage])
+          }
           markAsRead()
         }
       )
       .subscribe()
-    return () => { supabase.removeChannel(sub) }
+    channelRef.current = channel
   }
 
   async function loadMessages() {
+    setLoading(true)
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('messages')
         .select('*')
         .eq('ticket_id', ticketId)
         .order('created_at', { ascending: true })
-      if (data) {
-        setMessages(data as ChatMessage[])
-      }
-    } catch {
-      // silent
+      if (error) throw error
+      setMessages((data || []) as ChatMessage[])
+      markAsRead()
+    } catch (err: any) {
+      console.error('Chat load error:', err)
     } finally {
       setLoading(false)
     }
@@ -68,12 +82,16 @@ export function ChatPanel({ ticketId, ticketUserId }: ChatPanelProps) {
 
   async function markAsRead() {
     if (!profile) return
-    await supabase
-      .from('messages')
-      .update({ is_read: true })
-      .eq('ticket_id', ticketId)
-      .eq('sender_id', ticketUserId)
-      .eq('is_read', false)
+    try {
+      await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('ticket_id', ticketId)
+        .eq('sender_id', ticketUserId)
+        .eq('is_read', false)
+    } catch {
+      // silent
+    }
   }
 
   async function sendMessage() {
@@ -88,8 +106,9 @@ export function ChatPanel({ ticketId, ticketUserId }: ChatPanelProps) {
       }])
       if (error) throw error
       setText('')
-    } catch {
-      // silent
+    } catch (err: any) {
+      console.error('Chat send error:', err)
+      toast.error('Erro ao enviar mensagem')
     } finally {
       setSending(false)
     }
@@ -107,6 +126,7 @@ export function ChatPanel({ ticketId, ticketUserId }: ChatPanelProps) {
       <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center gap-2">
         <MessageSquare size={18} className="text-primary" />
         <h3 className="font-semibold text-gray-900 dark:text-white">Chat do Chamado</h3>
+        {!loading && <span className="text-xs text-gray-400 ml-auto">{messages.length} msg</span>}
       </div>
 
       <div className="h-72 overflow-y-auto p-4 space-y-3">
@@ -116,7 +136,7 @@ export function ChatPanel({ ticketId, ticketUserId }: ChatPanelProps) {
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <MessageSquare size={32} className="mx-auto mb-2 opacity-50" />
             <p className="text-sm">Nenhuma mensagem ainda</p>
-            <p className="text-xs mt-1">Envie a primeira mensagem para conversar com o usuário</p>
+            <p className="text-xs mt-1">Envie a primeira mensagem para conversar</p>
           </div>
         ) : (
           messages.map(m => {
@@ -157,13 +177,11 @@ export function ChatPanel({ ticketId, ticketUserId }: ChatPanelProps) {
             onKeyDown={handleKeyDown}
             rows={1}
             className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary outline-none text-sm resize-none"
-            placeholder="Digite sua mensagem..."
-          />
+            placeholder="Digite sua mensagem..." />
           <button
             onClick={sendMessage}
             disabled={!text.trim() || sending}
-            className="px-4 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-lg transition-all shrink-0"
-          >
+            className="px-4 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-lg transition-all shrink-0">
             <Send size={18} />
           </button>
         </div>
