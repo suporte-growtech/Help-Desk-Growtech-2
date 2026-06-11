@@ -1,8 +1,7 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { ThemeProvider } from './contexts/ThemeContext'
-import { AuthProvider, useAuth } from './contexts/AuthContext'
-import { Loading } from './components/ui/Loading'
+import { AuthProvider } from './contexts/AuthContext'
 import { Login } from './pages/Login'
 import { AdminLayout } from './components/Layout'
 import { AdminDashboard } from './pages/admin/Dashboard'
@@ -14,22 +13,35 @@ import { UserDashboard } from './pages/user/Dashboard'
 import { NewTicket } from './pages/user/NewTicket'
 import { MyTickets } from './pages/user/MyTickets'
 import { useEffect, useState } from 'react'
+import { supabase } from './lib/supabase'
+import { Loading } from './components/ui/Loading'
 
-function ProtectedRoute({ children, role }: { children: React.ReactNode; role?: string }) {
-  const { user, profile, loading, refresh } = useAuth()
-  const [checking, setChecking] = useState(true)
+function AuthGuard({ children, role }: { children: React.ReactNode; role?: string }) {
+  const [status, setStatus] = useState<'loading' | 'authenticated' | 'redirect'>('loading')
 
   useEffect(() => {
-    refresh().then(() => setChecking(false))
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.user) {
+        setStatus('redirect')
+        return
+      }
+      if (role) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single()
+        if (!profile || profile.role !== role) {
+          setStatus('redirect')
+          return
+        }
+      }
+      setStatus('authenticated')
+    })
   }, [])
 
-  if (loading || checking) return <Loading />
-  if (!user) return <Navigate to="/" replace />
-  if (role && !profile) return <Loading />
-  if (role && profile?.role !== role) {
-    return <Navigate to={profile?.role === 'admin' ? '/admin' : '/user'} replace />
-  }
-
+  if (status === 'loading') return <Loading />
+  if (status === 'redirect') return <Navigate to="/" replace />
   return <>{children}</>
 }
 
@@ -37,28 +49,25 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
-      
       <Route path="/admin" element={
-        <ProtectedRoute role="admin">
+        <AuthGuard role="admin">
           <AdminLayout />
-        </ProtectedRoute>
+        </AuthGuard>
       }>
         <Route index element={<AdminDashboard />} />
         <Route path="tickets" element={<AdminTickets />} />
         <Route path="tickets/:id" element={<AdminTicketDetail />} />
         <Route path="notebooks" element={<AdminNotebooks />} />
       </Route>
-
       <Route path="/user" element={
-        <ProtectedRoute role="user">
+        <AuthGuard role="user">
           <UserLayout />
-        </ProtectedRoute>
+        </AuthGuard>
       }>
         <Route index element={<UserDashboard />} />
         <Route path="new-ticket" element={<NewTicket />} />
         <Route path="my-tickets" element={<MyTickets />} />
       </Route>
-
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )

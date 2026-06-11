@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 
@@ -14,7 +14,6 @@ interface AuthContextType {
   user: User | null
   profile: Profile | null
   loading: boolean
-  refresh: () => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -25,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const refresh = useCallback(async () => {
+  async function loadSession() {
     const { data: { session } } = await supabase.auth.getSession()
     setUser(session?.user ?? null)
     if (session?.user) {
@@ -38,25 +37,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       setProfile(null)
     }
-  }, [])
+    setLoading(false)
+  }
 
   useEffect(() => {
-    refresh().then(() => setLoading(false))
+    loadSession()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      refresh()
+      loadSession()
     })
 
     return () => subscription.unsubscribe()
-  }, [refresh])
+  }, [])
 
   async function signOut() {
     await supabase.auth.signOut()
     setProfile(null)
+    setUser(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, refresh, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   )
