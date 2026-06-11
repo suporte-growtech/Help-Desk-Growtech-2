@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { Loading } from '../../components/ui/Loading'
-import { Plus, Search, Edit, Trash2, User, Shield, UserCog, Key, Eye, EyeOff } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, User, Shield, UserCog, Key, Eye, EyeOff, RotateCcw } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface UserProfile {
@@ -23,6 +23,12 @@ export function AdminUsers() {
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [generatedPassword, setGeneratedPassword] = useState('')
+  const [showResetModal, setShowResetModal] = useState(false)
+  const [resetUserId, setResetUserId] = useState<string | null>(null)
+  const [resetUserName, setResetUserName] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [resetting, setResetting] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -119,6 +125,47 @@ export function AdminUsers() {
       loadUsers()
     } catch {
       toast.error('Erro ao atualizar status')
+    }
+  }
+
+  function openResetPassword(user: UserProfile) {
+    setResetUserId(user.id)
+    setResetUserName(user.name)
+    setNewPassword('')
+    setShowNewPassword(false)
+    setShowResetModal(true)
+  }
+
+  async function handleResetPassword(e: React.FormEvent) {
+    e.preventDefault()
+    if (!resetUserId || !newPassword.trim()) return
+    setResetting(true)
+    try {
+      const session = await supabase.auth.getSession()
+      const token = session?.data?.session?.access_token
+
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ user_id: resetUserId, new_password: newPassword.trim() }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Erro ao redefinir senha')
+      }
+
+      toast.success(`Senha de ${resetUserName} redefinida!`)
+      setShowResetModal(false)
+      setResetUserId(null)
+      setNewPassword('')
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao redefinir senha')
+    } finally {
+      setResetting(false)
     }
   }
 
@@ -295,6 +342,9 @@ export function AdminUsers() {
                       <button onClick={() => handleToggleStatus(u)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-400 hover:text-warning transition-all" title={u.status === 'active' ? 'Desativar' : 'Ativar'}>
                         <UserCog size={14} />
                       </button>
+                      <button onClick={() => openResetPassword(u)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-400 hover:text-primary transition-all" title="Redefinir senha">
+                        <Key size={14} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -306,6 +356,52 @@ export function AdminUsers() {
           </table>
         </div>
       </div>
+
+      {showResetModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto" onClick={() => setShowResetModal(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md p-6 mt-20 mb-8" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400">
+                <Key size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Redefinir Senha</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Usuário: {resetUserName}</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nova Senha *</label>
+                <div className="relative">
+                  <input type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    className="w-full px-3 py-2 pr-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary outline-none"
+                    placeholder="Digite a nova senha"
+                    required minLength={6} />
+                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Mínimo de 6 caracteres</p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button type="submit" disabled={!newPassword.trim() || resetting}
+                  className="flex-1 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded-lg font-medium transition-all">
+                  {resetting ? 'Redefinindo...' : 'Redefinir Senha'}
+                </button>
+                <button type="button" onClick={() => setShowResetModal(false)}
+                  className="px-6 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-all hover:bg-gray-200 dark:hover:bg-gray-700">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
