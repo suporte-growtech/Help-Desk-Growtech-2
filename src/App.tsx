@@ -8,6 +8,7 @@ import { AdminDashboard } from './pages/admin/Dashboard'
 import { AdminTickets } from './pages/admin/Tickets'
 import { AdminTicketDetail } from './pages/admin/TicketDetail'
 import { AdminNotebooks } from './pages/admin/Notebooks'
+import { AdminUsers } from './pages/admin/Users'
 import { UserLayout } from './components/Layout'
 import { UserDashboard } from './pages/user/Dashboard'
 import { NewTicket } from './pages/user/NewTicket'
@@ -58,6 +59,7 @@ function AppRoutes() {
         <Route path="tickets" element={<AdminTickets />} />
         <Route path="tickets/:id" element={<AdminTicketDetail />} />
         <Route path="notebooks" element={<AdminNotebooks />} />
+        <Route path="users" element={<AdminUsers />} />
       </Route>
       <Route path="/user" element={
         <AuthGuard role="user">

@@ -3,7 +3,7 @@ import { ThemeToggle } from './ui/ThemeToggle'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import {
-  LayoutDashboard, Ticket, Monitor, LogOut, Menu, X, ChevronDown, HardDrive, Clock, Users
+  LayoutDashboard, Ticket, Monitor, LogOut, Menu, X, HardDrive, Clock, Users, UserCog
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -17,6 +17,7 @@ export function AdminLayout() {
     { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/admin/tickets', icon: Ticket, label: 'Chamados' },
     { to: '/admin/notebooks', icon: Monitor, label: 'Notebooks' },
+    { to: '/admin/users', icon: UserCog, label: 'Usuários' },
   ]
 
   const handleSignOut = async () => {

@@ -45,7 +45,7 @@ export function Login() {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
           await supabase.from('profiles').insert([
-            { id: user.id, name, role: 'user', department: '', city: '' }
+            { id: user.id, name, email, role: 'user', department: '', city: '' }
           ])
         }
         alert('Conta criada! Verifique seu email.')
