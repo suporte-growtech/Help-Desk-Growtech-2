@@ -11,8 +11,10 @@ import { AdminNotebooks } from './pages/admin/Notebooks'
 import { AdminUsers } from './pages/admin/Users'
 import { AdminEmails } from './pages/admin/Emails'
 import { AdminServers } from './pages/admin/Servers'
+import { AdminChat } from './pages/admin/Chat'
 import { UserLayout } from './components/Layout'
 import { UserDashboard } from './pages/user/Dashboard'
+import { UserChat } from './pages/user/Chat'
 import { NewTicket } from './pages/user/NewTicket'
 import { MyTickets } from './pages/user/MyTickets'
 import { useEffect, useState } from 'react'
@@ -64,6 +66,7 @@ function AppRoutes() {
         <Route path="users" element={<AdminUsers />} />
         <Route path="emails" element={<AdminEmails />} />
         <Route path="servers" element={<AdminServers />} />
+        <Route path="chat" element={<AdminChat />} />
       </Route>
       <Route path="/user" element={
         <AuthGuard role="user">
@@ -73,6 +76,7 @@ function AppRoutes() {
         <Route index element={<UserDashboard />} />
         <Route path="new-ticket" element={<NewTicket />} />
         <Route path="my-tickets" element={<MyTickets />} />
+        <Route path="chat" element={<UserChat />} />
       </Route>
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
